@@ -4,7 +4,8 @@ Declare @DB VARCHAR(30)
 Set @DB = db_name()
 
 -- Direct permission
-select @DB AS DB, sl.name as Name
+select @DB AS DB, 
+sl.name as Name
 , CASE WHEN isSQLRole = 1 THEN 'Role' WHEN issqluser = 1 THEN 'SQL User' WHEN sysusers.isntgroup = 1 THEN 'NT Group' WHEN sysusers.isntuser = 1 THEN 'NT User' ELSE '<n/a>' END AS Type
 , '(n/a)' as RoleName
 -- ,sysusers.gid
@@ -15,6 +16,7 @@ select @DB AS DB, sl.name as Name
 -- , sysusers.name as NameInDB
 from sysusers 
 join master.dbo.syslogins sl on sl.sid = sysusers.sid
+join master.sys.server_principals p on p.sid =  sl.sid and sl.denylogin = 0 and sl.hasaccess = 1 and p.is_disabled = 0 -- Exclude disabled accounts
 full join sysobjects on ( sysobjects.xtype in ( 'P', 'U', 'V' ) and sysobjects.Name NOT LIKE 'dt%' ) 
 left join sysprotects as sysprotects_1  on sysprotects_1.uid = sysusers.uid and sysprotects_1.id = sysobjects.id and sysprotects_1.action = 193 and sysprotects_1.protecttype in ( 204, 205 ) 
 left join sysprotects as sysprotects_2  on sysprotects_2.uid = sysusers.uid and sysprotects_2.id = sysobjects.id and sysprotects_2.action = 195 and sysprotects_2.protecttype in ( 204, 205 ) 
@@ -28,7 +30,8 @@ AND (isSQLRole <> 1 OR isSQLRole IS NULL) -- Exclude Roles because we show it in
 UNION
 
 -- Through Role Permission
-select @DB AS DB, sl.name as Name
+select @DB AS DB, 
+sl.name as Name
 , CASE WHEN u.isSQLRole = 1 THEN 'Role' WHEN u.issqluser = 1 THEN 'SQL User' WHEN u.isntgroup = 1 THEN 'NT Group' WHEN u.isntuser = 1 THEN 'NT User' ELSE '<n/a>' END AS Type
 , sysusers.name as RoleName
 -- ,sysusers.gid
@@ -39,6 +42,7 @@ select @DB AS DB, sl.name as Name
 -- , u.Name as NameInDB
 from sysusers u
 join master.dbo.syslogins sl on sl.sid = u.sid
+join master.sys.server_principals p on p.sid =  sl.sid and sl.denylogin = 0 and sl.hasaccess = 1 and p.is_disabled = 0 -- Exclude disabled accounts
 join sysmembers ON sysmembers.memberuid = u.uid
 join sysusers on sysusers.uid = sysmembers.groupuid
 full join sysobjects on ( sysobjects.xtype in ( 'P', 'U', 'V') and sysobjects.Name NOT LIKE 'dt%' ) 
@@ -52,7 +56,8 @@ where (sysprotects_1.action is not null or sysprotects_2.action is not null or s
 UNION
 
 -- Database System Roles
-select @DB as DB, sl.name as Name
+select @DB as DB, 
+sl.name as Name
 , CASE WHEN u.isSQLRole = 1 THEN 'Role' WHEN u.issqluser = 1 THEN 'SQL User' WHEN u.isntgroup = 1 THEN 'NT Group' WHEN u.isntuser = 1 THEN 'NT User' ELSE '<n/a>' END AS Type
 , r.name as RoleName
 -- , NULL [gid]
@@ -64,7 +69,8 @@ select @DB as DB, sl.name as Name
 , CASE WHEN r.name IN ('db_owner') THEN 'Yes' ELSE 'No' END [EXECUTE]
 -- , u.Name as NameInDB
 from sysusers u
-join master.dbo.syslogins sl on sl.sid = u.sid
+join master.dbo.syslogins sl ON sl.sid = u.sid
+join master.sys.server_principals p on p.sid =  sl.sid and sl.denylogin = 0 and sl.hasaccess = 1 and p.is_disabled = 0 -- Exclude disabled accounts
 join sysmembers ON sysmembers.memberuid = u.uid
 join sysusers r on r.uid = sysmembers.groupuid
 where r.name like 'db[_]%'
@@ -73,7 +79,7 @@ UNION
 
 -- Sysadmin Users
 select @DB as DB, 
-name as Name
+u.name as Name
 , CASE WHEN u.isntgroup = 1 THEN 'NT Group' WHEN u.isntuser = 1 THEN 'NT User' ELSE 'SQL User' END AS Type
 , 'sysadmin' as RoleName
 --, NULL [gid]
@@ -83,6 +89,8 @@ name as Name
 , 'Yes' as [UPDATE]
 , 'Yes' as [DELETE]
 , 'Yes' as [EXECUTE]
-from master.dbo.syslogins u WHERE sysadmin = 1 and hasaccess = 1
+-- from master.dbo.syslogins u WHERE sysadmin = 1 and hasaccess = 1
+from master.sys.server_principals p INNER JOIN master.dbo.syslogins u on p.sid =  u.sid where u.sysadmin = 1 and u.denylogin = 0 and u.hasaccess = 1 and p.is_disabled = 0 -- Exclude disabled accounts
 
 order by Name, RoleName, ObjectName
+

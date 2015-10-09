@@ -42,6 +42,7 @@ BEGIN
 ', CASE WHEN sysprotects_5.action is null THEN CASE WHEN sysobjects.xtype IN (''U'', ''V'') THEN ''N/A'' ELSE ''No'' END ELSE ''Yes'' END as ''EXECUTE'' ' +
 'from [' + @DB_Name + '].dbo.sysusers ' +
 'join master.dbo.syslogins sl on sl.sid = sysusers.sid ' +
+'join master.sys.server_principals p on p.sid =  sl.sid and sl.denylogin = 0 and sl.hasaccess = 1 and p.is_disabled = 0 ' +
 'full join [' + @DB_Name + '].dbo.sysobjects on ( sysobjects.xtype in ( ''P'', ''U'', ''V'' ) and sysobjects.Name NOT LIKE ''dt%'' ) ' +
 'left join [' + @DB_Name + '].dbo.sysprotects as sysprotects_1  on sysprotects_1.uid = sysusers.uid and sysprotects_1.id = sysobjects.id and sysprotects_1.action = 193 and sysprotects_1.protecttype in ( 204, 205 ) ' +
 'left join [' + @DB_Name + '].dbo.sysprotects as sysprotects_2  on sysprotects_2.uid = sysusers.uid and sysprotects_2.id = sysobjects.id and sysprotects_2.action = 195 and sysprotects_2.protecttype in ( 204, 205 ) ' +
@@ -65,6 +66,7 @@ SELECT @Command = 'select ''Through Role Permission'' AS Script, ''' + @DB_Name 
 ', CASE WHEN sysprotects_5.action is null THEN CASE WHEN sysobjects.xtype IN (''U'', ''V'') THEN ''N/A'' ELSE ''No'' END ELSE ''Yes'' END as ''EXECUTE'' ' +
 'from [' + @DB_Name + '].dbo.sysusers u ' +
 'join master.dbo.syslogins sl on sl.sid = u.sid ' +
+'join master.sys.server_principals p on p.sid =  sl.sid and sl.denylogin = 0 and sl.hasaccess = 1 and p.is_disabled = 0 ' +
 'join [' + @DB_Name + '].dbo.sysmembers ON sysmembers.memberuid = u.uid ' +
 'join [' + @DB_Name + '].dbo.sysusers on sysusers.uid = sysmembers.groupuid ' +
 'full join [' + @DB_Name + '].dbo.sysobjects on ( sysobjects.xtype in ( ''P'', ''U'', ''V'') and sysobjects.Name NOT LIKE ''dt%'' )  ' +
@@ -91,6 +93,7 @@ SELECT @Command = 'select ''Database System Roles'' AS Script, ''' + @DB_Name + 
 ', CASE WHEN r.name IN (''db_owner'') THEN ''Yes'' ELSE ''No'' END [EXECUTE] ' +
 'from [' + @DB_Name + '].dbo.sysusers u ' +
 'join master.dbo.syslogins sl on sl.sid = u.sid ' +
+'join master.sys.server_principals p on p.sid = sl.sid and sl.denylogin = 0 and sl.hasaccess = 1 and p.is_disabled = 0 ' +
 'join [' + @DB_Name + '].dbo.sysmembers ON sysmembers.memberuid = u.uid ' +
 'join [' + @DB_Name + '].dbo.sysusers r on r.uid = sysmembers.groupuid ' +
 'where r.name like ''db[_]%'' ' 
@@ -123,7 +126,8 @@ name as Name
 , 'Yes' as [UPDATE]
 , 'Yes' as [DELETE]
 , 'Yes' as [EXECUTE]
-from master.dbo.syslogins u WHERE sysadmin = 1 and hasaccess = 1
+-- from master.dbo.syslogins u WHERE sysadmin = 1 and hasaccess = 1
+from master.sys.server_principals p INNER JOIN master.dbo.syslogins u on p.sid =  u.sid where u.sysadmin = 1 and u.denylogin = 0 and u.hasaccess = 1 and p.is_disabled = 0 
 
 
 select @@ServerName AS Server, ID, Script AS Method, DB, Name, [Type], RoleName, ObjectName, [SELECT], [INSERT], [UPDATE], [DELETE], [EXECUTE] 

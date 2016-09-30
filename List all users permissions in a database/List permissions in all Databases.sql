@@ -117,7 +117,7 @@ DEALLOCATE database_cursor
 
 INSERT INTO @List (Script, DB, Name, [Type], RoleName, ObjectName, [SELECT], [INSERT], [UPDATE], [DELETE], [EXECUTE])
 SELECT 'Sysadmin Users' AS Script, 'master' as DB, 
-name as Name
+u.name as Name
 , CASE WHEN u.isntgroup = 1 THEN 'NT Group' WHEN u.isntuser = 1 THEN 'NT User' ELSE 'SQL User' END AS Type
 , 'sysadmin' as RoleName
 , '(all databases and its objects)' [objectname] 
